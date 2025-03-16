@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8888
   tomcat:
     max-swallow-size: -1
   error:
@@ -7,7 +7,7 @@ server:
     include-stacktrace: ALWAYS
     include-message: ALWAYS
   servlet:
-    context-path: /jeecg-boot
+    context-path: /ldw-boot
   compression:
     enabled: true
     min-response-size: 1024
@@ -163,9 +163,9 @@ spring:
           slow-sql-millis: 5000
       datasource:
         master:
-          url: jdbc:mysql://127.0.0.1:3306/jeecg-boot?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
-          username: root
-          password: root
+          url: jdbc:mysql://192.168.22.37:3306/jeecg-boot?characterEncoding=UTF-8&useUnicode=true&useSSL=false&tinyInt1isBit=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai
+          username: jeecg-boot
+          password: Ldw@123
           driver-class-name: com.mysql.cj.jdbc.Driver
           # 多数据源配置
           #multi-datasource1:
@@ -175,10 +175,10 @@ spring:
           #driver-class-name: com.mysql.cj.jdbc.Driver
   #redis 配置
   redis:
-    database: 0
-    host: 127.0.0.1
+    database: 8
+    host: 192.168.22.37
     port: 6379
-    password: ''
+    password: 'Ldw@123'
 #mybatis plus 设置
 mybatis-plus:
   mapper-locations: classpath*:org/jeecg/**/xml/*Mapper.xml
@@ -310,8 +310,8 @@ knife4j:
   production: true
   basic:
     enable: true
-    username: jeecg
-    password: jeecg1314
+    username: ldw
+    password: Ldw@123
 #第三方登录
 justauth:
   enabled: true
