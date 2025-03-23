@@ -58,7 +58,11 @@ public class LdwProductInfoServiceImpl extends ServiceImpl<LdwProductInfoMapper,
             for (LdwProductInfo ldwProductInfo : productInfoList) {
                 processProduct(ldwProductInfo, responseProductVO.getData().getNextToken());
             }
-
+            if(-1==nextToken){
+                Log.get().info("没有更多数据，退出循环, 产品数据同步完成");
+                hasMoreData = false;
+                break;
+            }
             // 更新nextToken，获取下一页数据
             nextToken = responseProductVO.getData().getNextToken();
         }
@@ -80,13 +84,15 @@ public class LdwProductInfoServiceImpl extends ServiceImpl<LdwProductInfoMapper,
             // 如果数据库中不存在该产品，则保存；否则更新
             if (ObjectUtil.isEmpty(ldwProductInfoDb)) {
                 save(ldwProductInfo);
+                // 记录同步成功的日志
+                Log.get().info("nextToken：" + nextToken + " ，SKU = " + ldwProductInfo.getSku() + "。产品【新增】成功");
             } else {
                 ldwProductInfo.setId(ldwProductInfoDb.getId());
                 updateById(ldwProductInfo);
+                Log.get().info("nextToken：" + nextToken + " ，SKU = " + ldwProductInfo.getSku() + "。产品【更新】成功");
             }
 
-            // 记录同步成功的日志
-            Log.get().info("nextToken：" + nextToken + " ，SKU = " + ldwProductInfo.getSku() + "。产品同步成功");
+
         } catch (Exception e) {
             // 处理重复数据的情况
             if (StrUtil.containsAnyIgnoreCase(e.getMessage(), "duplicate")) {
