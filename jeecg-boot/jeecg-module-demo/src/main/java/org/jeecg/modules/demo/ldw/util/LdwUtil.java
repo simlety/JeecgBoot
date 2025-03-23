@@ -17,6 +17,9 @@ import javax.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * LdwUtil 类提供了与LDW系统交互的工具方法，包括获取Token、发送请求、记录错误日志等功能。
+ */
 @Component
 public class LdwUtil {
     public static final String LDW_TOKEN = "ldw_token";
@@ -30,12 +33,20 @@ public class LdwUtil {
     @Autowired
     private ILdwSyncRecordService ldwSyncRecordInstance;
 
+    /**
+     * 初始化方法，用于将Spring注入的实例赋值给静态变量。
+     */
     @PostConstruct
     public void init() {
         redisUtil = redisUtilInstance;
         ldwSyncRecordService = ldwSyncRecordInstance;
     }
 
+    /**
+     * 获取LDW系统的Token。如果Redis缓存中存在Token，则直接返回；否则通过API请求获取并缓存。
+     *
+     * @return 返回LDW系统的Token字符串。
+     */
     public static String getToken() {
         Object token = redisUtil.get(LDW_TOKEN);
         if (ObjectUtil.isNotEmpty(token)) {
@@ -59,13 +70,23 @@ public class LdwUtil {
                 .execute()
                 .body();
         Map resultMap = JSON.parseObject(result, Map.class);
-        redisUtil.set(LDW_TOKEN, resultMap.get("token"), 60 * 60 * 6);
+        redisUtil.set(LDW_TOKEN, resultMap.get("token"), 60 * 60 * 1);
         Log.get().info("获取Token成功！token={}", String.valueOf(resultMap.get("token")));
         return String.valueOf(resultMap.get("token"));
     }
 
-
-    public static String getResponseStr(Integer current, Integer pageSize, String startTime, String endTime, String Url,Integer nextToken) {
+    /**
+     * 发送请求到指定URL，并返回响应字符串。支持分页、时间范围等参数。
+     *
+     * @param current   当前页码，用于分页查询。
+     * @param pageSize  每页大小，用于分页查询。
+     * @param startTime 查询开始时间，可选。
+     * @param endTime   查询结束时间，可选。
+     * @param Url       请求的URL。
+     * @param nextToken 下一个Token，用于分批查询。
+     * @return 返回请求的响应字符串。
+     */
+    public static String getResponseStr(Integer current, Integer pageSize, String startTime, String endTime, String Url, Integer nextToken) {
         // 构建请求头
         Map<String, String> headers = new HashMap<>();
         headers.put("User-Agent", "Apifox/1.0.0 (https://apifox.com)");
@@ -112,7 +133,14 @@ public class LdwUtil {
         return responseStr;
     }
 
-    public static void addErrorRecord(String businessId, Exception e,String tableName){
+    /**
+     * 记录错误日志到数据库。
+     *
+     * @param businessId 业务ID，用于标识错误发生的业务。
+     * @param e          异常对象，包含错误信息。
+     * @param tableName  表名，用于标识错误发生的表。
+     */
+    public static void addErrorRecord(String businessId, Exception e, String tableName) {
         LdwSyncRecord ldwSyncRecord = new LdwSyncRecord();
         ldwSyncRecord.setBusinessId(businessId);
         ldwSyncRecord.setErrorMessage(ExceptionUtil.getRootCauseMessage(e));
@@ -121,5 +149,24 @@ public class LdwUtil {
         ldwSyncRecord.setTableName(tableName);
         ldwSyncRecordService.save(ldwSyncRecord);
     }
+
+    /**
+     * 获取远程配置数据。
+     *
+     * @param url 远程配置的URL。
+     * @return 返回远程配置的字符串数据，如果获取失败则返回null。
+     */
+    public static String getRemoteConfigData(String url) {
+        try {
+            String result = HttpRequest.get(url)
+                    .execute()
+                    .body();
+            return result;
+        } catch (Exception e) {
+            Log.get().error("获取远程配置失败！url={}，异常信息={}", url, ExceptionUtil.getRootCauseMessage(e));
+        }
+        return null;
+    }
+
 }
 

@@ -11,4 +11,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ILdwOrderItemsService extends IService<LdwOrderItems> {
 
+    void removeByOrderId(Integer id);
 }

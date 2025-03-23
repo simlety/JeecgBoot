@@ -1,8 +1,11 @@
 package org.jeecg.modules.demo.ldw.controller;
 
+import cn.hutool.core.date.DateUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.xiaoymin.knife4j.core.util.StrUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -14,9 +17,11 @@ import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.config.shiro.IgnoreAuth;
 import org.jeecg.modules.demo.ldw.entity.LdwSyncRecord;
 import org.jeecg.modules.demo.ldw.entity.RequestVO;
+import org.jeecg.modules.demo.ldw.service.ILdwEbayListingsService;
 import org.jeecg.modules.demo.ldw.service.ILdwOrdersService;
 import org.jeecg.modules.demo.ldw.service.ILdwProductInfoService;
 import org.jeecg.modules.demo.ldw.service.ILdwSyncRecordService;
+import org.jeecg.modules.demo.ldw.util.LdwUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -36,6 +41,7 @@ import java.util.Arrays;
 @RequestMapping("/ldw/ldwSyncRecord")
 @Slf4j
 public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdwSyncRecordService> {
+    public static final String STRING_TIME = " 00:00:00";
     @Autowired
     private ILdwSyncRecordService ldwSyncRecordService;
 
@@ -43,6 +49,8 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
     private ILdwOrdersService ldwOrdersService;
     @Autowired
     private ILdwProductInfoService ldwProductInfoService;
+    @Autowired
+    private ILdwEbayListingsService ldwEbayListingsService;
 
     /**
      * 分页列表查询
@@ -168,28 +176,62 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
         return super.importExcel(request, response, LdwSyncRecord.class);
     }
 
-    /**
-     * 同步订单数据
-     *
-     * @return
-     */
+
     @IgnoreAuth
     @PostMapping(value = "/syncOrders")
     public Result<String> syncOrders(@RequestBody RequestVO requestVO) {
+        String startTime = getDefaultTime(requestVO.getStartTime(), -1);
+        String endTime = getDefaultTime(requestVO.getEndTime(), 0);
+        requestVO.setStartTime(startTime);
+        requestVO.setEndTime(endTime);
+        log.info("订单同步开始时间：" + startTime + "，结束时间：" + endTime);
+        log.info("订单同步参数：" + JSON.toJSONString(requestVO));
         ldwOrdersService.syncOrders(requestVO);
         return Result.OK("同步成功！");
     }
 
-    /**
-     * 同步产品数据
-     *
-     * @return
-     */
     @IgnoreAuth
     @PostMapping(value = "/syncProducts")
     public Result<String> syncProducts(@RequestBody RequestVO requestVO) {
+        String startTime = getDefaultTime(requestVO.getStartTime(), -1);
+        String endTime = getDefaultTime(requestVO.getEndTime(), 0);
+        requestVO.setStartTime(startTime);
+        requestVO.setEndTime(endTime);
+        log.info("产品同步开始时间：" + startTime + "，结束时间：" + endTime);
+        log.info("产品同步参数：" + JSON.toJSONString(requestVO));
         ldwProductInfoService.syncProducts(requestVO);
         return Result.OK("同步成功！");
     }
 
+    @IgnoreAuth
+    @PostMapping(value = "/syncEbayListings")
+    public Result<String> syncEbayListings(@RequestBody RequestVO requestVO) {
+        try {
+            if (StrUtil.isBlank(requestVO.getRemoteConfigUrl())) {
+                return Result.error("remoteConfigUrl is null！");
+            }
+            String startTime = getDefaultTime(requestVO.getStartTime(), -1);
+            String endTime = getDefaultTime(requestVO.getEndTime(), 0);
+            requestVO.setStartTime(startTime);
+            requestVO.setEndTime(endTime);
+            log.info("ebay销售管理同步开始时间：" + startTime + "，结束时间：" + endTime);
+            log.info("ebay销售管理同步参数：" + JSON.toJSONString(requestVO));
+            ldwEbayListingsService.syncEbayListings(requestVO);
+            return Result.OK("同步成功！");
+        } catch (Exception e) {
+            LdwUtil.addErrorRecord("requestVO:" + JSON.toJSONString(requestVO), e, "ldw_ebay_listings");
+        }
+        return Result.error("同步失败！");
+    }
+
+    /**
+     * 获取默认时间
+     *
+     * @param time      传入的时间
+     * @param offsetDay 偏移天数
+     * @return 格式化后的时间
+     */
+    private String getDefaultTime(String time, int offsetDay) {
+        return StrUtil.isBlank(time) ? (DateUtil.formatDate(DateUtil.offsetDay(DateUtil.date(), offsetDay)) + STRING_TIME) : time;
+    }
 }

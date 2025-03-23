@@ -34,4 +34,9 @@ public class RequestVO implements Serializable {
      */
     private Integer nextToken;
 
+    /**
+     * 远程配置URL
+     */
+    private String remoteConfigUrl;
+
 }
