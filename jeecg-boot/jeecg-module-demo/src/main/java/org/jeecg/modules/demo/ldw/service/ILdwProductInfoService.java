@@ -1,7 +1,8 @@
 package org.jeecg.modules.demo.ldw.service;
 
-import org.jeecg.modules.demo.ldw.entity.LdwProductInfo;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.jeecg.modules.demo.ldw.entity.LdwProductInfo;
+import org.jeecg.modules.demo.ldw.entity.RequestVO;
 
 /**
  * @Description: ldw_product_info
@@ -11,4 +12,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface ILdwProductInfoService extends IService<LdwProductInfo> {
 
+    void syncProducts(RequestVO requestVO);
 }

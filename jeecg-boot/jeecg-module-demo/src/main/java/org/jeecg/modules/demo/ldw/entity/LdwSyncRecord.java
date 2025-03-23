@@ -35,9 +35,15 @@ public class LdwSyncRecord implements Serializable {
     private static final long serialVersionUID = 1L;
 
 	/**主键ID（雪花算法生成）*/
-	@TableId(type = IdType.ASSIGN_ID)
+	@TableId(type = IdType.AUTO)
     @ApiModelProperty(value = "主键ID（雪花算法生成）")
     private java.lang.Integer id;
+
+    /**业务ID，冗余业务主键*/
+    @Excel(name = "业务ID,冗余业务主键", width = 15)
+    @ApiModelProperty(value = "业务ID")
+    private java.lang.String businessId;
+
 	/**目标表名（冗余存储便于快速定位）*/
 	@Excel(name = "目标表名（冗余存储便于快速定位）", width = 15)
     @ApiModelProperty(value = "目标表名（冗余存储便于快速定位）")

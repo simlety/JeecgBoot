@@ -2,6 +2,7 @@ package org.jeecg.modules.demo.ldw.service;
 
 import org.jeecg.modules.demo.ldw.entity.LdwSyncRecord;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.jeecg.modules.demo.ldw.entity.RequestVO;
 
 import java.util.Map;
 
@@ -13,5 +14,4 @@ import java.util.Map;
  */
 public interface ILdwSyncRecordService extends IService<LdwSyncRecord> {
 
-    void sync(Map maps);
 }

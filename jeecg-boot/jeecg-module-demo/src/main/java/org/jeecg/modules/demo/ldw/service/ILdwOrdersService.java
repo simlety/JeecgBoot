@@ -2,6 +2,7 @@ package org.jeecg.modules.demo.ldw.service;
 
 import org.jeecg.modules.demo.ldw.entity.LdwOrders;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.jeecg.modules.demo.ldw.entity.RequestVO;
 
 /**
  * @Description: ldw_orders
@@ -10,5 +11,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @Version: V1.0
  */
 public interface ILdwOrdersService extends IService<LdwOrders> {
-
+    void syncOrders(RequestVO requestVO);
 }
