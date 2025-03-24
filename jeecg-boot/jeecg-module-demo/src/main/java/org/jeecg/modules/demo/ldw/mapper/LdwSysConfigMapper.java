@@ -1,0 +1,17 @@
+package org.jeecg.modules.demo.ldw.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Param;
+import org.jeecg.modules.demo.ldw.entity.LdwSysConfig;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+
+/**
+ * @Description: ldw_sys_config
+ * @Author: jeecg-boot
+ * @Date:   2025-03-24
+ * @Version: V1.0
+ */
+public interface LdwSysConfigMapper extends BaseMapper<LdwSysConfig> {
+
+}

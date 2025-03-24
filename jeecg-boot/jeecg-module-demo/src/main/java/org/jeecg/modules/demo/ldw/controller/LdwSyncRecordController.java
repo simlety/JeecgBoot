@@ -19,10 +19,7 @@ import org.jeecg.common.util.RedisUtil;
 import org.jeecg.config.shiro.IgnoreAuth;
 import org.jeecg.modules.demo.ldw.entity.LdwSyncRecord;
 import org.jeecg.modules.demo.ldw.entity.RequestVO;
-import org.jeecg.modules.demo.ldw.service.ILdwEbayListingsService;
-import org.jeecg.modules.demo.ldw.service.ILdwOrdersService;
-import org.jeecg.modules.demo.ldw.service.ILdwProductInfoService;
-import org.jeecg.modules.demo.ldw.service.ILdwSyncRecordService;
+import org.jeecg.modules.demo.ldw.service.*;
 import org.jeecg.modules.demo.ldw.util.LdwUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -53,6 +50,10 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
     private ILdwProductInfoService ldwProductInfoService;
     @Autowired
     private ILdwEbayListingsService ldwEbayListingsService;
+
+    @Autowired
+    private ILdwProductInventoryService ldwProductInventoryService;
+
 
     @Autowired
     private RedisUtil redisUtil;
@@ -234,6 +235,28 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
             return Result.OK("同步成功！");
         } catch (Exception e) {
             LdwUtil.addErrorRecord("requestVO:" + JSON.toJSONString(requestVO), e, "ldw_ebay_listings");
+        }
+        return Result.error("同步失败！");
+    }
+
+
+    @IgnoreAuth
+    @PostMapping(value = "/syncInventory")
+    public Result<String> syncInventory(@RequestBody RequestVO requestVO) {
+        try {
+            if (!checkRequestFrequency(requestVO)) {
+                return Result.error("调用频繁，请稍后再试！");
+            }
+            String startTime = getDefaultTime(requestVO.getStartTime(), -2);
+            String endTime = getDefaultTime(requestVO.getEndTime(), 2);
+            requestVO.setStartTime(startTime);
+            requestVO.setEndTime(endTime);
+            log.info("库存同步开始时间：" + startTime + "，结束时间：" + endTime);
+            log.info("库存同步参数：" + JSON.toJSONString(requestVO));
+            ldwProductInventoryService.syncInventory(requestVO);
+            return Result.OK("库存同步成功！");
+        } catch (Exception e) {
+            LdwUtil.addErrorRecord("requestVO:" + JSON.toJSONString(requestVO), e, "ldw_product_inventory");
         }
         return Result.error("同步失败！");
     }
