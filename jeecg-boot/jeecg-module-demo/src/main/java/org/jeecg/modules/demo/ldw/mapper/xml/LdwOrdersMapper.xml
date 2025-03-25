@@ -2,4 +2,21 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.jeecg.modules.demo.ldw.mapper.LdwOrdersMapper">
 
+    <!-- 根据业务标识查询warehouse_id -->
+    <select id="selectWarehouseId" resultType="org.jeecg.modules.demo.ldw.entity.LdwOrders">
+        SELECT warehouse_id
+        FROM ldw_orders
+        <where>
+            <if test="orderSourceName != null">
+                order_source_name LIKE CONCAT('%', #{orderSourceName}, '%')
+            </if>
+            <if test="overseasOrder != null">
+                or order_source_name = #{overseasOrder}
+            </if>
+            <if test="localOrder != null">
+                or order_source_name = #{localOrder}
+            </if>
+        </where>
+        GROUP BY warehouse_id
+    </select>
 </mapper>

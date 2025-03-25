@@ -31,6 +31,20 @@ public class LdwOrdersServiceImpl extends ServiceImpl<LdwOrdersMapper, LdwOrders
 
     @Autowired
     private ILdwOrderItemsService ldwOrderItemsService;
+    @Autowired
+    private LdwOrdersMapper ldwOrdersMapper;
+    /**
+     * 根据订单来源名称、海外仓订单和本地订单查询仓库ID列表
+     *
+     * @param orderSourceName 订单来源名称，用于模糊查询
+     * @param overseasOrder   海外仓订单名称，用于精确匹配
+     * @param localOrder      本地订单名称，用于精确匹配
+     * @return 返回符合条件的 {@link LdwOrders} 列表
+     */
+    @Override
+    public List<LdwOrders> selectWarehouseId(String orderSourceName, String overseasOrder, String localOrder) {
+        return ldwOrdersMapper.selectWarehouseId(orderSourceName, overseasOrder, localOrder);
+    }
 
     /**
      * 同步订单数据

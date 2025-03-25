@@ -1,6 +1,7 @@
 package org.jeecg.modules.demo.ldw.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
@@ -10,13 +11,12 @@ import cn.hutool.log.Log;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.jeecg.modules.demo.ldw.entity.LdwOrders;
-import org.jeecg.modules.demo.ldw.entity.LdwProductInventory;
-import org.jeecg.modules.demo.ldw.entity.RequestVO;
-import org.jeecg.modules.demo.ldw.entity.ResponseProductInventoryVO;
+import org.jeecg.modules.demo.ldw.constant.LdwConstant;
+import org.jeecg.modules.demo.ldw.entity.*;
 import org.jeecg.modules.demo.ldw.mapper.LdwProductInventoryMapper;
 import org.jeecg.modules.demo.ldw.service.ILdwOrdersService;
 import org.jeecg.modules.demo.ldw.service.ILdwProductInventoryService;
+import org.jeecg.modules.demo.ldw.service.ILdwSysConfigService;
 import org.jeecg.modules.demo.ldw.util.LdwUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,18 +37,27 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
     @Autowired
     private ILdwOrdersService ldwOrdersService;
 
+    @Autowired
+    private ILdwSysConfigService ldwSysConfigService;
+
     @Override
     public void syncInventory(RequestVO requestVO) {
-
-
-        QueryWrapper<LdwOrders> queryWrapper = new QueryWrapper<>();
-        //TODO 改成配置
-        queryWrapper.lambda().likeLeft(true, LdwOrders::getOrderSourceName, "LDW");
-        queryWrapper.lambda().eq(true, LdwOrders::getOrderSourceName, "海外仓备库订单-LDW");
-        queryWrapper.lambda().eq(true, LdwOrders::getOrderSourceName, "本地备库订单");
-        queryWrapper.lambda().groupBy(LdwOrders::getWarehouseId);
-        List<LdwOrders> ldwOrdersDbList = ldwOrdersService.list(queryWrapper);
-
+        //获取配置
+        QueryWrapper<LdwSysConfig> configQueryWrapper = new QueryWrapper<>();
+        configQueryWrapper.lambda().eq(LdwSysConfig::getConfigKey, LdwConstant.LDW_SOURCE_WHITE_KEY);
+        LdwSysConfig ldwSysConfig = ldwSysConfigService.getOne(configQueryWrapper);
+        String configValue = ldwSysConfig.getConfigValue();
+        if (StrUtil.isBlank(configValue)) {
+            Log.get().error("获取渠道来源白名单配置数据失败，同步终止");
+            return;
+        }
+        Map configMap = JSON.parseObject(configValue, Map.class);
+        if (MapUtil.isEmpty(configMap)) {
+            Log.get().error("获取渠道来源白名单MAP为NULL，同步终止");
+            return;
+        }
+        Log.get().info("开始同步库存数据，库存渠道白名单配置信息{}.", configValue);
+        List<LdwOrders> ldwOrdersDbList = ldwOrdersService.selectWarehouseId(String.valueOf(configMap.get("orderSourceName")), String.valueOf(configMap.get("overseasOrder")), String.valueOf(configMap.get("localOrder")));
         if (CollUtil.isEmpty(ldwOrdersDbList)) {
             Log.get().error("没有仓库数据，退出循环");
             return;
@@ -104,7 +113,7 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
                     }
                 }
                 if (-1 == nextToken) {
-                    Log.get().info("没有更多数据，退出循环, 库存数据同步完成");
+                    Log.get().info("仓库ID=" + warehouseID + ",没有更多数据，退出循环, 库存数据同步完成");
                     hasMoreData = false;
                     break;
                 }

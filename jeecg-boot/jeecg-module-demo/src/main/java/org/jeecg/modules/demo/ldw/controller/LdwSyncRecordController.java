@@ -17,6 +17,7 @@ import org.jeecg.common.system.base.controller.JeecgController;
 import org.jeecg.common.system.query.QueryGenerator;
 import org.jeecg.common.util.RedisUtil;
 import org.jeecg.config.shiro.IgnoreAuth;
+import org.jeecg.modules.demo.ldw.constant.LdwConstant;
 import org.jeecg.modules.demo.ldw.entity.LdwSyncRecord;
 import org.jeecg.modules.demo.ldw.entity.RequestVO;
 import org.jeecg.modules.demo.ldw.service.*;
@@ -281,16 +282,16 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
     private boolean checkRequestFrequency(RequestVO requestVO) {
         // 生成请求参数的哈希值作为 Redis 键
         String requestHash = String.valueOf(HashUtil.fnvHash(JSON.toJSONString(requestVO)));
-
+        String redisKey = LdwConstant.REDIS_REQUEST_LIMIT_TOKEN+requestHash;
         // 检查 Redis 中是否存在该请求
-        Long lastRequestTime = (Long) redisUtil.get(requestHash);
+        Long lastRequestTime = (Long) redisUtil.get(redisKey);
         if (lastRequestTime != null && System.currentTimeMillis() - lastRequestTime < 30 * 60 * 1000) {
             // 30 分钟内已调用过相同参数的请求
             return false;
         }
 
         // 更新 Redis 中的时间戳
-        redisUtil.set(requestHash, System.currentTimeMillis(), 30 * 60); // 设置缓存有效期为 30 分钟
+        redisUtil.set(redisKey, System.currentTimeMillis(), 30 * 60); // 设置缓存有效期为 30 分钟
         return true;
     }
 }
