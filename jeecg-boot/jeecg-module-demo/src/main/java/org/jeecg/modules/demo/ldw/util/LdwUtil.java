@@ -6,10 +6,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.log.Log;
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.jeecg.common.util.RedisUtil;
 import org.jeecg.modules.demo.ldw.entity.LdwSyncRecord;
-import org.jeecg.modules.demo.ldw.entity.ResponseVO;
+import org.jeecg.modules.demo.ldw.entity.LdwSysConfig;
 import org.jeecg.modules.demo.ldw.service.ILdwSyncRecordService;
+import org.jeecg.modules.demo.ldw.service.ILdwSysConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -26,12 +28,17 @@ public class LdwUtil {
 
     private static RedisUtil redisUtil;
     private static ILdwSyncRecordService ldwSyncRecordService;
+    private static ILdwSysConfigService ldwSysConfigService;
 
     @Autowired
     private RedisUtil redisUtilInstance;
 
     @Autowired
     private ILdwSyncRecordService ldwSyncRecordInstance;
+
+    @Autowired
+    private ILdwSysConfigService ldwSysConfigInstance;
+
 
     /**
      * 初始化方法，用于将Spring注入的实例赋值给静态变量。
@@ -40,6 +47,7 @@ public class LdwUtil {
     public void init() {
         redisUtil = redisUtilInstance;
         ldwSyncRecordService = ldwSyncRecordInstance;
+        ldwSysConfigService = ldwSysConfigInstance;
     }
 
     /**
@@ -168,5 +176,28 @@ public class LdwUtil {
         return null;
     }
 
+
+    /**
+     * 根据配置键获取系统配置值。
+     *
+     * @param key 配置键，用于查询对应的配置值。
+     * @return 返回配置值字符串。如果配置值为空或无效，则返回空字符串。
+     */
+    public static String getSysConfigValueByKey(String key) {
+        // 构建查询条件
+        QueryWrapper<LdwSysConfig> configQueryWrapper = new QueryWrapper<>();
+        configQueryWrapper.lambda().eq(LdwSysConfig::getConfigKey, key);
+
+        // 查询配置信息
+        LdwSysConfig ldwSysConfig = ldwSysConfigService.getOne(configQueryWrapper);
+        String configValue = ldwSysConfig.getConfigValue();
+
+        // 检查配置值是否有效
+        if (StrUtil.isBlank(configValue)) {
+            Log.get().error("获取配置键为 {} 的配置数据失败，返回空字符串", key);
+            return StrUtil.EMPTY;
+        }
+        return configValue;
+    }
 }
 

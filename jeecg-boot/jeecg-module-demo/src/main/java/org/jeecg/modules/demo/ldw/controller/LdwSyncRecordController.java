@@ -223,9 +223,6 @@ public class LdwSyncRecordController extends JeecgController<LdwSyncRecord, ILdw
             if (!checkRequestFrequency(requestVO)) {
                 return Result.error("调用频繁，请稍后再试！");
             }
-            if (StrUtil.isBlank(requestVO.getRemoteConfigUrl())) {
-                return Result.error("remoteConfigUrl is null！");
-            }
             String startTime = getDefaultTime(requestVO.getStartTime(), -2);
             String endTime = getDefaultTime(requestVO.getEndTime(), 2);
             requestVO.setStartTime(startTime);

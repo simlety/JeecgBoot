@@ -10,6 +10,7 @@ import cn.hutool.log.Log;
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.jeecg.modules.demo.ldw.constant.LdwConstant;
 import org.jeecg.modules.demo.ldw.entity.LdwEbayListings;
 import org.jeecg.modules.demo.ldw.entity.RequestVO;
 import org.jeecg.modules.demo.ldw.entity.ResponseEbayListingsVO;
@@ -33,16 +34,20 @@ public class LdwEbayListingsServiceImpl extends ServiceImpl<LdwEbayListingsMappe
     public static final String LDW_EBAY_LISTINGS_TABLE_NAME = "ldw_ebay_listings";
 
     /**
-     * 同步Ebay销售数据
+     * 同步Ebay商品刊登管理数据
      *
      * @param requestVO 请求参数对象，包含分页信息、时间范围等
      */
     @Override
     public void syncEbayListings(RequestVO requestVO) {
-        //获取远程配置
-        String remoteConfigUrl = requestVO.getRemoteConfigUrl();
-        String responseUrlStr = LdwUtil.getRemoteConfigData(remoteConfigUrl);
-        List<Integer> orderSourceIDList = JSONUtil.parseArray(responseUrlStr).toList(Integer.class);
+        // 获取配置信息
+        String configValue = LdwUtil.getSysConfigValueByKey(LdwConstant.LDW_ORDER_SOURCE_IDS_VALUE);
+        // 检查配置是否有效
+        if (StrUtil.isBlank(configValue)) {
+            Log.get().error("获取订单渠道置orderSourceID数据失败，商品刊登管理数据同步终止");
+            return;
+        }
+        List<Integer> orderSourceIDList = JSONUtil.parseArray(configValue).toList(Integer.class);
         for (Integer orderSourceID : orderSourceIDList) {
             // 是否还有更多数据
             boolean hasMoreData = true;
@@ -68,7 +73,7 @@ public class LdwEbayListingsServiceImpl extends ServiceImpl<LdwEbayListingsMappe
                     hasMoreData = false;
                     break;
                 }
-                int totalPage = (responseEbayListingsVO.getRecordCount() / requestVO.getPageSize())+1;
+                int totalPage = (responseEbayListingsVO.getRecordCount() / requestVO.getPageSize()) + 1;
                 // 处理当前页数据
                 for (LdwEbayListings ldwEbayListings : ldwEbayListingsList) {
                     try {

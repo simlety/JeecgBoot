@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @Description: ldw_product_inventory
+ * LdwProductInventoryServiceImpl 实现类
+ * 负责处理库存数据的同步操作
+ *
  * @Author: jeecg-boot
  * @Date: 2025-03-24
  * @Version: V1.0
@@ -34,49 +36,62 @@ import java.util.Map;
 public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInventoryMapper, LdwProductInventory> implements ILdwProductInventoryService {
 
     public static final String LDW_PRODUCT_INVENTORY = "ldw_product_inventory";
+
     @Autowired
     private ILdwOrdersService ldwOrdersService;
 
-    @Autowired
-    private ILdwSysConfigService ldwSysConfigService;
-
+    /**
+     * 同步库存数据
+     *
+     * @param requestVO 请求参数对象，包含同步所需的时间区间等信息
+     */
     @Override
     public void syncInventory(RequestVO requestVO) {
-        //获取配置
-        QueryWrapper<LdwSysConfig> configQueryWrapper = new QueryWrapper<>();
-        configQueryWrapper.lambda().eq(LdwSysConfig::getConfigKey, LdwConstant.LDW_SOURCE_WHITE_KEY);
-        LdwSysConfig ldwSysConfig = ldwSysConfigService.getOne(configQueryWrapper);
-        String configValue = ldwSysConfig.getConfigValue();
+        // 获取配置信息
+        String configValue = LdwUtil.getSysConfigValueByKey(LdwConstant.LDW_SOURCE_WHITE_KEY);
+        // 检查配置是否有效
         if (StrUtil.isBlank(configValue)) {
             Log.get().error("获取渠道来源白名单配置数据失败，同步终止");
             return;
         }
+        // 解析配置信息
         Map configMap = JSON.parseObject(configValue, Map.class);
         if (MapUtil.isEmpty(configMap)) {
             Log.get().error("获取渠道来源白名单MAP为NULL，同步终止");
             return;
         }
+
         Log.get().info("开始同步库存数据，库存渠道白名单配置信息{}.", configValue);
-        List<LdwOrders> ldwOrdersDbList = ldwOrdersService.selectWarehouseId(String.valueOf(configMap.get("orderSourceName")), String.valueOf(configMap.get("overseasOrder")), String.valueOf(configMap.get("localOrder")));
+
+        // 获取仓库数据
+        List<LdwOrders> ldwOrdersDbList = ldwOrdersService.selectWarehouseId(
+            String.valueOf(configMap.get("orderSourceName")),
+            String.valueOf(configMap.get("overseasOrder")),
+            String.valueOf(configMap.get("localOrder"))
+        );
+
         if (CollUtil.isEmpty(ldwOrdersDbList)) {
             Log.get().error("没有仓库数据，退出循环");
             return;
         }
+
+        // 遍历仓库数据
         for (LdwOrders ldwOrders : ldwOrdersDbList) {
             Integer warehouseID = ldwOrders.getWarehouseId();
             if (warehouseID <= 0) {
                 Log.get().error("仓库ID无效，跳过循环");
                 continue;
             }
-            // 是否还有更多数据
+
+            // 分页获取库存数据
             boolean hasMoreData = true;
             int nextToken = 0;
             while (hasMoreData) {
-                // 获取当前页数据
                 String responseStr = getResponseStr(nextToken, requestVO, warehouseID);
                 List<LdwProductInventory> ldwProductInventoryList;
                 Map mapData;
                 ResponseProductInventoryVO responseProductInventoryVO;
+
                 try {
                     mapData = JSON.parseObject(responseStr, Map.class);
                     String obj = JSON.toJSONString(mapData.get("data"));
@@ -86,19 +101,21 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
                     logError(requestVO, responseStr, e);
                     continue;
                 }
+
+                // 检查是否有更多数据
                 if (mapData == null || mapData.get("data") == null || ObjectUtil.isEmpty(responseProductInventoryVO) || CollUtil.isEmpty(ldwProductInventoryList)) {
-                    // 没有更多数据，退出循环
                     Log.get().info("没有更多数据，退出循环，仓库ID=" + warehouseID + ", 库存数据同步完成");
                     hasMoreData = false;
                     break;
                 }
 
-                // 处理当前页数据
+                // 处理当前页的库存数据
                 for (LdwProductInventory ldwProductInventory : ldwProductInventoryList) {
                     try {
                         QueryWrapper<LdwProductInventory> queryWrapperProductInventory = new QueryWrapper<>();
                         queryWrapperProductInventory.lambda().eq(true, LdwProductInventory::getSku, ldwProductInventory.getSku());
                         LdwProductInventory ldwProductInventoryDb = getOne(queryWrapperProductInventory);
+
                         if (ObjectUtil.isEmpty(ldwProductInventoryDb)) {
                             save(ldwProductInventory);
                             Log.get().info("nextToken=" + responseProductInventoryVO.getNextToken() + " ,仓库ID=" + warehouseID + ",SKU=" + ldwProductInventory.getSku() + "，库存数据【新增】成功");
@@ -112,19 +129,18 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
                         Log.get().error("nextToken=" + responseProductInventoryVO.getNextToken() + " ,仓库ID=" + warehouseID + ",SKU=" + ldwProductInventory.getSku() + "，库存数据【更新】失败", e);
                     }
                 }
+
                 if (-1 == nextToken) {
                     Log.get().info("仓库ID=" + warehouseID + ",没有更多数据，退出循环, 库存数据同步完成");
                     hasMoreData = false;
                     break;
                 }
+
                 // 更新页码
                 nextToken = responseProductInventoryVO.getNextToken();
             }
-
         }
-
     }
-
 
     /**
      * 记录错误日志
@@ -138,12 +154,17 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
         Log.get().error("时间区间: " + requestVO.getStartTime() + "~" + requestVO.getEndTime() + "页，写入记录表失败 ,订单同步失败", e);
     }
 
-
+    /**
+     * 获取库存数据的响应字符串
+     *
+     * @param nextToken   分页令牌
+     * @param requestVO   请求参数对象
+     * @param warehouseID 仓库ID
+     * @return 响应字符串
+     */
     private String getResponseStr(Integer nextToken, RequestVO requestVO, Integer warehouseID) {
-        // 请求URL
         String url = "https://erpopenplatform.irobotbox.com/api/Product/ProductInfo/GetProductInventory";
 
-        // 构建JSON请求体
         JSONObject input = JSONUtil.createObj()
                 .set("customerID", 8120)
                 .set("startTime", requestVO.getStartTime())
@@ -160,8 +181,7 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
         JSONObject requestBody = JSONUtil.createObj().set("input", input);
 
         try {
-            // 发送POST请求
-            String result = HttpRequest.post(url)
+            return HttpRequest.post(url)
                     .header("User-Agent", "Apifox/1.0.0 (https://apifox.com)")
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + LdwUtil.getToken())
@@ -171,7 +191,6 @@ public class LdwProductInventoryServiceImpl extends ServiceImpl<LdwProductInvent
                     .body(requestBody.toString())
                     .execute()
                     .body();
-            return result;
         } catch (Exception e) {
             Log.get().error("HTTP请求失败", e);
             return null;
