@@ -202,9 +202,9 @@ jeecg:
   # AI集成
   ai-chat:
     enabled: true
-    model: deepseek-chat
-    apiKey: ??
-    apiHost: https://api.deepseek.com
+    model: deepseek-ai/DeepSeek-R1
+    apiKey: sk-wsapngwmdlecbccxuzjvmtbzivbbfmkqigfsyzgqyxdutofw
+    apiHost: https://api.siliconflow.cn/v1
     timeout: 60
   # 平台上线安全配置
   firewall:
